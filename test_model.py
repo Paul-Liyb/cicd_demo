@@ -23,3 +23,4 @@ def test_model_output_dimensions():
     # 检查输出的形状是否为 (1, 2)
     assert output.shape == (1, 2), f"模型输出维度错误, 期望 (1, 2), 得到 {output.shape}"
     assert True  # 如果没有断言失败，测试通过
+    # test
