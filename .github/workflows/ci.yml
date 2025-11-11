@@ -1,42 +1,50 @@
 # .github/workflows/ci.yml
 
-# 1. 工作流的名称
 name: CI for AI Model
 
-# 2. 触发条件：
-# 当有代码 "push" (推送) 到 "main" 分支时触发
 on:
   push:
     branches: [ "main" ]
-  # (我们也可以添加 pull_request，但现在保持简单)
 
-# 3. 任务 (Jobs)：
-# 我们可以定义一个或多个任务，它们可以并行或串行运行
 jobs:
-  # 我们定义一个名为 "build-and-test" 的任务
   build-and-test:
-    # 4. 运行环境：
-    # 告诉 GitHub 在一个最新的 Ubuntu 虚拟机上运行这个任务
     runs-on: ubuntu-latest
-
-    # 5. 步骤 (Steps)：
-    # 任务中要依次执行的步骤
     steps:
-      # 第 1 步：检出代码
-      # 这个 "uses" 关键字使用了 GitHub 社区写好的一个 "action"
-      # 它的作用是把你的仓库代码下载到虚拟机上
+      # 第 1 步：检出代码 (不变)
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      # 第 2 步：构建 Docker 镜像
-      # 这会找到我们项目中的 Dockerfile 并执行它
-      # 我们给这个镜像起一个名字，比如 "my-model-image"
-      - name: Build Docker image
-        run: docker build . --file Dockerfile --tag my-model-image
+      # 第 2 步 (新增)：设置 Buildx
+      # 这是 docker/build-push-action 的一个准备步骤
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # 第 3 步：运行 Docker 镜像 (执行测试)
-      # 这会启动我们刚刚构建的镜像。
-      # 回想一下，我们在 Dockerfile 的最后一行写了 CMD ["pytest"]
-      # 所以，一旦容器启动，它就会自动运行 pytest！
+      # 第 3 步 (核心)：构建 Docker 镜像 (带缓存)
+      # 我们不再使用 'run: docker build'
+      # 而是使用这个功能更强大的官方 Action
+      - name: Build Docker image with Cache
+        uses: docker/build-push-action@v6
+        with:
+          # context: . 告诉它 Dockerfile 在根目录
+          context: .
+          # file: 明确指定 Dockerfile 的路径
+          file: ./Dockerfile
+          # tags: 仍然给镜像起个名字
+          tags: my-model-image
+          # push: false 意味着我们只构建，不推送到镜像仓库
+          push: false
+          
+          # --- 这是启用缓存的关键 ---
+          
+          # cache-from: 告诉 Docker 从哪里读取缓存
+          # type=gha 意味着使用 GitHub Actions 自己的缓存
+          cache-from: type=gha
+          
+          # cache-to: 告诉 Docker 构建完成后，把缓存写到哪里
+          # type=gha 和 mode=max 确保所有层都被写入缓存
+          cache-to: type=gha,mode=max
+
+      # 第 4 步：运行 Pytest (不变)
+      # 我们仍然运行那个在本地构建好的、带缓存的镜像
       - name: Run Pytest inside Docker container
         run: docker run my-model-image
