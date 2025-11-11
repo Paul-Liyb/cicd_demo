@@ -1,6 +1,6 @@
 # test_model.py
 import torch
-from model import create_model, SimpleModel
+from model import create_model
 
 def test_model_output_dimensions():
     """
@@ -19,7 +19,7 @@ def test_model_output_dimensions():
     model.eval() 
     with torch.no_grad(): # 关闭梯度计算，节省内存和计算
         output = model(dummy_input)
-    
     # 3. 断言 (Assert)
     # 检查输出的形状是否为 (1, 2)
     assert output.shape == (1, 2), f"模型输出维度错误, 期望 (1, 2), 得到 {output.shape}"
+    assert True  # 如果没有断言失败，测试通过
